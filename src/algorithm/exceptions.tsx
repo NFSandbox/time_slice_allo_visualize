@@ -1,5 +1,5 @@
-import {BaseError} from '@/exceptions/general';
-import {ProcessControlBlock} from './general';
+import { BaseError } from '@/exceptions/general';
+import { ProcessControlBlock } from './schemes';
 
 export class AlgorithmError extends BaseError {
 }
@@ -11,7 +11,6 @@ export class AllocAfterFinishedError extends AlgorithmError {
       'alloc_after_finished',
       'Try to allocate time slice to a process that has already been finished. \n'
       + pcb.toString()
-    )
-    ;
+    );
   }
 }

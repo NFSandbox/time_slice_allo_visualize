@@ -1,4 +1,4 @@
-import * as algoExc from './exceptions';
+import * as algoExc from "./exceptions";
 
 export class ProcessControlBlock {
   /**
@@ -11,9 +11,16 @@ export class ProcessControlBlock {
   readonly requiredTime: number;
 
   /**
+   * An int number represents the priority of this process.
+   *
+   * Larger number indicates higher priority
+   */
+  readonly priority: number = 0;
+
+  /**
    * The unit of time that this process already got to run on the CPU
    */
-  processedTime: number;
+  processedTime: number = 0;
 
   /**
    * When this task arrives and could be allocated.
@@ -39,8 +46,12 @@ export class ProcessControlBlock {
    */
   get remainingTime() {
     let rest = this.requiredTime - this.processedTime;
-    rest < 0 ? rest = 0 : rest;
+    rest < 0 ? (rest = 0) : rest;
     return rest;
+  }
+
+  isArrived(currentTime: number): boolean {
+    return currentTime >= this.arrivalTime;
   }
 
   isFinished() {
@@ -51,20 +62,26 @@ export class ProcessControlBlock {
     if (time < 0) {
       throw new algoExc.AllocAfterFinishedError(this);
     }
+
+    this.processedTime += time;
   }
 
   toString(): string {
     return `ProcessID: ${this.pId}, Required/Processed: ${this.requiredTime}/${this.processedTime}, Progress: ${this.progress}`;
   }
 
-  constructor(pId: string, arrivalTime: number, requiredTime: number) {
+  constructor(
+    pId: string,
+    arrivalTime: number,
+    requiredTime: number,
+    priority?: number,
+  ) {
     this.pId = pId;
     this.arrivalTime = arrivalTime;
     this.requiredTime = requiredTime;
-    this.processedTime = 0;
+    this.priority = priority ?? this.priority;
   }
 }
-
 
 export interface SimulatorSnapshot {
   timestamp: number;

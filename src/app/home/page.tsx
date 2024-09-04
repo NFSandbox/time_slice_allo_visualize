@@ -2,10 +2,14 @@
 import {FlexDiv, PageRootContainer} from '@/components/container';
 import {Header, HeaderTitle} from '@/components/header';
 
+// Client
+import {Test} from './client';
+
 // Tools
 import {classNames} from '@/tools/css_tools';
 
 export default function Page() {
+  
   return (
     <PageRootContainer header={
       <>
@@ -14,7 +18,9 @@ export default function Page() {
         </Header>
       </>
     }>
-      Hi
+      123
+      <Test></Test>
+      {/* {JSON.stringify(res)} */}
     </PageRootContainer>
   );
 }

@@ -1,5 +1,7 @@
-import {ProcessControlBlock, SimulatorSnapshot} from './schemes';
-import {AlgorithmError} from "@/algorithm/exceptions";
+"use client";
+
+import { ProcessControlBlock, SimulatorSnapshot } from "./schemes";
+import { AlgorithmError } from "@/algorithm/exceptions";
 
 export abstract class SimulatorBase {
   /**
@@ -24,13 +26,16 @@ export abstract class SimulatorBase {
    *
    * - The state will NOT be automatically added to ``snapshotList``
    */
-  generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number) {
+  generateSnapshot(
+    nextAllocation?: ProcessControlBlock,
+    nextTimeSlice?: number,
+  ) {
     let snapshot: SimulatorSnapshot = {
       timestamp: this.currentTime,
       pcbList: this.pcbList,
       nextAllocation: nextAllocation,
       nextTimeSlice: nextTimeSlice,
-    }
+    };
 
     return snapshot;
   }
@@ -40,7 +45,8 @@ export abstract class SimulatorBase {
    *
    * Override:
    *
-   * This method, for most of the time, should be the **only method that needs to be rewritten by the subclass**.
+   * This method, for most of the time, should be the **one of the two methods
+   * that needs to be rewritten by the subclass**.
    * Since this method **directly determines the way how we choose the next task to give time slice**.
    *
    * Returns:
@@ -50,7 +56,114 @@ export abstract class SimulatorBase {
    */
   abstract getNextAllocation(): ProcessControlBlock | undefined;
 
-  protected constructor(pcbList: ProcessControlBlock[]) {
+  /**
+   * Returns the length of the time slice should be dispatched to next PCB
+   *
+   * Params:
+   * - ``nextPcb`` The next process chosen
+   */
+  abstract getNextTimeSlice(nextPcb: ProcessControlBlock): number;
+
+  /**
+   * Determine if all processes in pcbList is finished
+   */
+  allFinished(): boolean {
+    for (let pcb of this.pcbList) {
+      if (pcb.isFinished() === false) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Execute allocation decision, then update simulator states.
+   */
+  confirmAllocation(
+    nextAllocation: ProcessControlBlock,
+    nextTimeSlice: number,
+  ): void {
+    // update timestamp of simulator
+    this.currentTime += nextTimeSlice;
+
+    // update the chosen PCB
+    nextAllocation.allocateTime(nextTimeSlice);
+
+    // update finish time of pcb
+    if (nextAllocation.isFinished()) {
+      nextAllocation.finishTime = this.currentTime + nextAllocation.remainingTime;
+    }
+  }
+
+  simulate(): SimulatorSnapshot[] {
+    while (!this.allFinished()) {
+      // determine next allocation an next time slice
+      let nextAllocation = this.getNextAllocation();
+      if (nextAllocation === undefined) {
+        throw new AlgorithmError(
+          "next_process_not_found",
+          "Could not determine which process to choose",
+        );
+      }
+      let nextTimeSlice = this.getNextTimeSlice(nextAllocation);
+
+      // generate snapshot
+      let newSnapshot = this.generateSnapshot(nextAllocation, nextTimeSlice);
+      this.snapshotList.push(newSnapshot);
+
+      // apply dispatch
+      this.confirmAllocation(nextAllocation, nextTimeSlice);
+    }
+
+    // Add an final snapshot as the finishing snapshot
+    let finalSnapshot = this.generateSnapshot();
+    this.snapshotList.push(finalSnapshot);
+
+    return this.snapshotList;
+  }
+
+  constructor(pcbList: ProcessControlBlock[]) {
     this.pcbList = pcbList;
+  }
+}
+
+export class HighPriorityFirstSimulator extends SimulatorBase {
+  override getNextAllocation(): ProcessControlBlock | undefined {
+    let chosen: ProcessControlBlock | undefined = undefined;
+
+    for (let pcb of this.pcbList) {
+      // already finished, or haven't arrived
+      // skip
+      if (pcb.isFinished() || !pcb.isArrived(this.currentTime)) {
+        continue;
+      }
+
+      if (chosen === undefined) {
+        chosen = pcb;
+        continue;
+      }
+
+      if (chosen.priority < pcb.priority) {
+        chosen = pcb;
+      }
+    }
+
+    if (chosen === undefined) {
+      throw new AlgorithmError(
+        "no_valid_process",
+        "Could not find a valid process to proceed, maybe all process has already finished",
+      );
+    }
+
+    return chosen;
+  }
+
+  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+    return pcb.remainingTime;
+  }
+
+  constructor(pcbList: ProcessControlBlock[]) {
+    super(pcbList);
   }
 }
