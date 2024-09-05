@@ -1,7 +1,8 @@
 "use client";
 
-import { ProcessControlBlock, SimulatorSnapshot } from "./schemes";
-import { AlgorithmError } from "@/algorithm/exceptions";
+import {ProcessControlBlock, SimulatorSnapshot} from "./schemes";
+import {AlgorithmError, NoValidAllocationError} from "@/algorithm/exceptions";
+import {instanceToInstance} from "class-transformer";
 
 export abstract class SimulatorBase {
   /**
@@ -12,7 +13,7 @@ export abstract class SimulatorBase {
   /**
    * Store the current state of the PCB list
    */
-  protected pcbList: ProcessControlBlock[];
+  public readonly pcbList: ProcessControlBlock[];
 
   /**
    * Record the state changes of the simulator
@@ -30,9 +31,16 @@ export abstract class SimulatorBase {
     nextAllocation?: ProcessControlBlock,
     nextTimeSlice?: number,
   ) {
+
+    // Actually here is creating a deep copy of pcbList
+    let pcbListSnapshot: ProcessControlBlock[] = [];
+    for (let i of this.pcbList) {
+      pcbListSnapshot.push(instanceToInstance(i));
+    }
+
     let snapshot: SimulatorSnapshot = {
       timestamp: this.currentTime,
-      pcbList: this.pcbList,
+      pcbList: pcbListSnapshot,
       nextAllocation: nextAllocation,
       nextTimeSlice: nextTimeSlice,
     };
@@ -69,7 +77,7 @@ export abstract class SimulatorBase {
    */
   allFinished(): boolean {
     for (let pcb of this.pcbList) {
-      if (pcb.isFinished() === false) {
+      if (!pcb.isFinished()) {
         return false;
       }
     }
@@ -84,6 +92,7 @@ export abstract class SimulatorBase {
     nextAllocation: ProcessControlBlock,
     nextTimeSlice: number,
   ): void {
+
     // update timestamp of simulator
     this.currentTime += nextTimeSlice;
 
@@ -96,39 +105,69 @@ export abstract class SimulatorBase {
     }
   }
 
+  /**
+   * Start to simulate the CPU time slice dispatching process until ALL processes has been marked finished.
+   *
+   * Return a list of ``SimulatorSnapshot`` that could represent the whole dispatch process.
+   */
   simulate(): SimulatorSnapshot[] {
-    while (!this.allFinished()) {
-      // determine next allocation an next time slice
-      let nextAllocation = this.getNextAllocation();
-      if (nextAllocation === undefined) {
-        throw new AlgorithmError(
-          "next_process_not_found",
-          "Could not determine which process to choose",
-        );
-      }
-      let nextTimeSlice = this.getNextTimeSlice(nextAllocation);
-
-      // generate snapshot
-      let newSnapshot = this.generateSnapshot(nextAllocation, nextTimeSlice);
-      this.snapshotList.push(newSnapshot);
-
-      // apply dispatch
-      this.confirmAllocation(nextAllocation, nextTimeSlice);
+    while (this.moveNext()) {
     }
-
-    // Add an final snapshot as the finishing snapshot
-    let finalSnapshot = this.generateSnapshot();
-    this.snapshotList.push(finalSnapshot);
 
     return this.snapshotList;
   }
 
+  /**
+   * Move a single step forward using ``getNextAllocation()`` and ``getNextTimeSlice()``
+   *
+   * Returns:
+   *
+   * - ``true`` If the simulation is not finished before move.
+   * - ``false`` Means allFinished() is already true, which means no need to move forward anymore.
+   */
+  moveNext(): boolean {
+    if (this.allFinished()) {
+      let idleSnapshot = this.generateSnapshot();
+      this.snapshotList.push(idleSnapshot);
+      return false;
+    }
+
+    // determine next allocation an next time slice
+    let nextAllocation = this.getNextAllocation();
+    if (nextAllocation === undefined) {
+      throw new NoValidAllocationError(this.generateSnapshot());
+    }
+    let nextTimeSlice = this.getNextTimeSlice(nextAllocation);
+
+    // generate snapshot
+    let newSnapshot = this.generateSnapshot(nextAllocation, nextTimeSlice);
+    this.snapshotList.push(newSnapshot);
+
+    // apply dispatch
+    this.confirmAllocation(nextAllocation, nextTimeSlice);
+
+    return true;
+  }
+
   constructor(pcbList: ProcessControlBlock[]) {
-    this.pcbList = pcbList;
+    this.pcbList = [];
+    for (let i of pcbList) {
+      this.pcbList.push(instanceToInstance(i));
+    }
   }
 }
 
 export class HighPriorityFirstSimulator extends SimulatorBase {
+  /**
+   * The minimum length of one time slice.
+   */
+  public timeSlice: number = 1;
+  /**
+   * Determine if the current process could be interrupted by other incoming processes with higher priority
+   * after a time slice end.
+   */
+  public preemptive: boolean = false;
+
   override getNextAllocation(): ProcessControlBlock | undefined {
     let chosen: ProcessControlBlock | undefined = undefined;
 
@@ -139,10 +178,19 @@ export class HighPriorityFirstSimulator extends SimulatorBase {
         continue;
       }
 
+      // if there's already an active process, and the simulator is set as non-preemptive
+      // Then this process must be finished first before any other process could get time slice
+      if (pcb.processedTime > 0 && !this.preemptive) {
+        chosen = pcb;
+        break;
+      }
+
+      // first found as not finished
       if (chosen === undefined) {
         chosen = pcb;
         continue;
       }
+
 
       if (chosen.priority < pcb.priority) {
         chosen = pcb;
@@ -160,10 +208,154 @@ export class HighPriorityFirstSimulator extends SimulatorBase {
   }
 
   override getNextTimeSlice(pcb: ProcessControlBlock): number {
-    return pcb.remainingTime;
+    // return pcb.remainingTime;
+    return this.timeSlice;
   }
 
   constructor(pcbList: ProcessControlBlock[]) {
     super(pcbList);
   }
+
+  /**
+   * Sort the pcb list using current timestamp as the context in place, and return the ref of the list itself.
+   *
+   * Notice, the PCB that hasn't arrived will be put at the last of the list.
+   */
+  sortPcbListInCurrentTimeContext(pcbList: ProcessControlBlock[]): ProcessControlBlock[] {
+    const currentTime = this.currentTime;
+
+    function compareFn(pcb1: ProcessControlBlock, pcb2: ProcessControlBlock): number {
+      let pcb1Arrived = pcb1.isArrived(currentTime);
+      let pcb2Arrived = pcb2.isArrived(currentTime);
+
+      let pcb1Finished = pcb1.isFinished();
+      let pcb2Finished = pcb2.isFinished();
+
+      if (pcb1Finished !== pcb2Finished) {
+        if (pcb1Finished) {
+          return 1;
+        }
+        return -1;
+      }
+
+      if (pcb1Arrived !== pcb2Arrived) {
+        if (pcb1Arrived) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+
+
+      return pcb2.priority - pcb1.priority;
+    }
+
+    return pcbList.sort(compareFn);
+  }
+
+  /**
+   * Override snapshot generation process, sort the list into the order we want
+   */
+  override generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number): SimulatorSnapshot {
+    const snapshot = super.generateSnapshot(nextAllocation, nextTimeSlice);
+    this.sortPcbListInCurrentTimeContext(snapshot.pcbList);
+    return snapshot;
+  }
 }
+
+export class ShortJobFirstSimulator extends SimulatorBase {
+  timeSlice: number = 1;
+  preemptive: boolean = false;
+
+  override getNextAllocation(): ProcessControlBlock | undefined {
+    let chosen: ProcessControlBlock | undefined = undefined;
+
+    for (let pcb of this.pcbList) {
+      // already finished, or haven't arrived
+      // skip
+      if (pcb.isFinished() || !pcb.isArrived(this.currentTime)) {
+        continue;
+      }
+
+      // if there's already an active process, and the simulator is set as non-preemptive
+      // Then this process must be finished first before any other process could get time slice
+      if (pcb.processedTime > 0 && !this.preemptive) {
+        chosen = pcb;
+        break;
+      }
+
+      // first found as not finished
+      if (chosen === undefined) {
+        chosen = pcb;
+        continue;
+      }
+
+
+      if (chosen.requiredTime > pcb.requiredTime) {
+        chosen = pcb;
+      }
+    }
+
+    if (chosen === undefined) {
+      throw new NoValidAllocationError(this.generateSnapshot());
+    }
+
+    return chosen;
+  }
+
+  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+    // return pcb.remainingTime;
+    return this.timeSlice;
+  }
+
+  /**
+   * Sort the pcb list using current timestamp as the context in place, and return the ref of the list itself.
+   *
+   * Notice, the PCB that hasn't arrived will be put at the last of the list.
+   */
+  sortPcbListInCurrentTimeContext(pcbList: ProcessControlBlock[]): ProcessControlBlock[] {
+    const currentTime = this.currentTime;
+
+    function compareFn(pcb1: ProcessControlBlock, pcb2: ProcessControlBlock): number {
+      let pcb1Arrived = pcb1.isArrived(currentTime);
+      let pcb2Arrived = pcb2.isArrived(currentTime);
+
+      let pcb1Finished = pcb1.isFinished();
+      let pcb2Finished = pcb2.isFinished();
+
+      if (pcb1Finished !== pcb2Finished) {
+        if (pcb1Finished) {
+          return 1;
+        }
+        return -1;
+      }
+
+      if (pcb1Arrived !== pcb2Arrived) {
+        if (pcb1Arrived) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+
+
+      return pcb1.requiredTime - pcb2.requiredTime;
+    }
+
+    return pcbList.sort(compareFn);
+  }
+
+  /**
+   * Override snapshot generation process, sort the list into the order we want
+   */
+  override generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number): SimulatorSnapshot {
+    const snapshot = super.generateSnapshot(nextAllocation, nextTimeSlice);
+    this.sortPcbListInCurrentTimeContext(snapshot.pcbList);
+    return snapshot;
+  }
+}
+
+// todo: Implementing MFQSimulator
+// export class MFQSimulator extends SimulatorBase {
+//   timeSlice: number = 1;
+// }

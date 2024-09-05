@@ -1,9 +1,12 @@
-import { ProcessControlBlock } from './schemes';
+import {ProcessControlBlock} from './schemes';
 
 export const examplePcbListWithPriority: ProcessControlBlock[] = [
-    // pid, arrival, required, priority
-    new ProcessControlBlock('P1', 0, 3, 1),
-    new ProcessControlBlock('P2', 1, 5, 10),
-    new ProcessControlBlock('P3', 1, 3, 100),
-    new ProcessControlBlock('P4', 4, 5, 20),
+  // pid, arrival, required, priority
+  new ProcessControlBlock('P1', 0, 2, 1),
+  new ProcessControlBlock('P2', 1, 10, 10),
+  new ProcessControlBlock('P3', 3, 3, 100),
+  new ProcessControlBlock('P4', 4, 2, 20),
+  new ProcessControlBlock('P5', 7, 6, 30),
+  new ProcessControlBlock('P6', 8, 3, 70),
+
 ];
