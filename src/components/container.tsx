@@ -322,7 +322,7 @@ export function PageRootContainer(props: PageRootContainerProps) {
         className={classNames(
           'items-center justify-start flex-col',
           hasPadding ? 'p-2' : '',
-          allowScrolling ? 'overflow-y-auto' : '',
+          allowScrolling ? 'overflow-auto' : '',
           props.contentFlexClassName ?? '',
         )}>
         {props.children}

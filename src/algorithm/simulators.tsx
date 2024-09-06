@@ -32,7 +32,7 @@ export abstract class SimulatorBase {
     nextTimeSlice?: number,
   ) {
 
-    // Actually here is creating a deep copy of pcbList
+    // Actually, here is creating a deep copy of pcbList
     let pcbListSnapshot: ProcessControlBlock[] = [];
     for (let i of this.pcbList) {
       pcbListSnapshot.push(instanceToInstance(i));
