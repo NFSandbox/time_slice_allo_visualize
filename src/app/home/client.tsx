@@ -1,24 +1,35 @@
 'use client';
 
-import {forwardRef} from "react";
+import { forwardRef, useEffect } from "react";
 
 // Packages
-import {AnimatePresence, motion} from 'framer-motion';
-import {Button} from 'antd';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Button } from 'antd';
 
 // Components
-import {ProcessControlBlockMiniCard} from '@/cus_components/algorithms';
+import { ProcessControlBlockMiniCard } from '@/cus_components/algorithms';
 
 // Algorithms
-import {examplePcbListWithPriority} from '@/algorithm/examples';
-import {HighPriorityFirstSimulator, ShortJobFirstSimulator} from '@/algorithm/simulators';
-import {useRef, useState} from "react";
+import { examplePcbListWithPriority } from '@/algorithm/examples';
+import {
+  HighPriorityFirstSimulator,
+  ShortJobFirstSimulator,
+  MFQSimulator,
+}
+  from '@/algorithm/simulators';
+import { useRef, useState } from "react";
 
 // Tools
-import {classNames} from '@/tools/css_tools';
+import { classNames } from '@/tools/css_tools';
 
 export function Test() {
-  const simulator = useRef(new ShortJobFirstSimulator(examplePcbListWithPriority));
+  const simulator = useRef(new MFQSimulator(examplePcbListWithPriority));
+  useEffect(function() {
+    simulator.current.setMFQConfig({
+      count: 4,
+      timeSlices: [1, 2, 4, 8]
+    });
+  }, [simulator.current]);
 
   const [simulatorState, setSimulatorState] =
     useState(simulator.current.generateSnapshot());
@@ -26,7 +37,7 @@ export function Test() {
   function triggerMoveNext() {
     simulator.current.moveNext();
     let snapshot = simulator.current.snapshotList[simulator.current.snapshotList.length - 1];
-    snapshot.pcbList = snapshot.pcbList.filter(function (value) {
+    snapshot.pcbList = snapshot.pcbList.filter(function(value) {
       return !value.isFinished();
     })
     setSimulatorState(snapshot);
@@ -39,7 +50,7 @@ export function Test() {
         ''
       )}>
         <AnimatePresence mode={"popLayout"}>
-          {simulatorState.pcbList.map(function (value) {
+          {simulatorState.pcbList.map(function(value) {
             return <motion.div key={value.pId} className={classNames(
               'p-2',
             )}>

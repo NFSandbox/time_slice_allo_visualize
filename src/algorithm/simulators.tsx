@@ -1,8 +1,8 @@
 "use client";
 
-import {ProcessControlBlock, SimulatorSnapshot} from "./schemes";
-import {AlgorithmError, NoValidAllocationError} from "@/algorithm/exceptions";
-import {instanceToInstance} from "class-transformer";
+import { ProcessControlBlock, SimulatorSnapshot } from "./schemes";
+import { AlgorithmError, NoValidAllocationError } from "@/algorithm/exceptions";
+import { instanceToInstance } from "class-transformer";
 
 export abstract class SimulatorBase {
   /**
@@ -87,9 +87,13 @@ export abstract class SimulatorBase {
 
   /**
    * Execute allocation decision, then update simulator states.
+   *
+   * Notice:
+   *
+   * - If ``nextAllocation`` undefined, only update timestamp of simulator
    */
   confirmAllocation(
-    nextAllocation: ProcessControlBlock,
+    nextAllocation: ProcessControlBlock | undefined,
     nextTimeSlice: number,
   ): void {
 
@@ -97,10 +101,10 @@ export abstract class SimulatorBase {
     this.currentTime += nextTimeSlice;
 
     // update the chosen PCB
-    nextAllocation.allocateTime(nextTimeSlice);
+    nextAllocation?.allocateTime(nextTimeSlice);
 
     // update finish time of pcb
-    if (nextAllocation.isFinished()) {
+    if (nextAllocation && nextAllocation.isFinished()) {
       nextAllocation.finishTime = this.currentTime + nextAllocation.remainingTime;
     }
   }
@@ -355,7 +359,175 @@ export class ShortJobFirstSimulator extends SimulatorBase {
   }
 }
 
-// todo: Implementing MFQSimulator
-// export class MFQSimulator extends SimulatorBase {
-//   timeSlice: number = 1;
-// }
+/**
+ * Interface used as config schema of MFQ simulator.
+ */
+interface MFQQueueConfig {
+  /**
+   * The total number of the feedback queues
+   */
+  count: number;
+  /**
+   * Time slice for each feedback queue
+   */
+  timeSlices: number[];
+}
+
+type PCBList = ProcessControlBlock[];
+
+export interface MFQSimulatorAdditionInfo {
+  feedbackQueues: PCBList[];
+  selectedQueueIdx: number;
+}
+
+/**
+ * To use this simulator, setMFQconfig() should be called first.
+ */
+export class MFQSimulator extends SimulatorBase {
+  public queueCount: number = 0;
+  public timeSlices: number[] = [];
+  public switchImmediatelyAfterFinish: boolean = true;
+
+  /**
+   * If the simulator could be interrput if there is process incoming
+   * to the queue with higher priority then currently processing one
+   */
+  preeptive: boolean = false;
+
+  /**
+   * Temp value to store the rest of the allocated queue and time if there is
+   * an ongoing process
+   */
+  protected tmpRestTime = -1;
+
+  /**
+   * Record the index of the feedback queue that bas been selected
+   */
+  protected tmpSelectedQueueIdx = -1;
+
+  /**
+   * Simulated data structure of feedback lists
+   *
+   * Should be initialized first by calling ``setMFQConfig()``
+   */
+  feedbackQueues: PCBList[] = [];
+
+  /**
+   * Method to initialize feedback queue based on the receiving config
+   *
+   * Necessary step before simulation
+   */
+  setMFQConfig(config: MFQQueueConfig): MFQSimulator {
+    for (let i = 0; i < config.count; ++i) {
+      this.feedbackQueues.push([]);
+    }
+    this.queueCount = config.count;
+    this.timeSlices = config.timeSlices;
+
+    return this;
+  }
+
+  override getNextAllocation(): ProcessControlBlock | undefined {
+    const queueIdx = this.tmpSelectedQueueIdx;
+
+    // add newly arrived process
+    for (let process of this.pcbList) {
+      if (process.arrivalTime == this.currentTime) {
+        this.feedbackQueues[0].push(process);
+      }
+    }
+
+    // if there is still tmp rest time, deal with it first
+    if (this.tmpRestTime > 0 && queueIdx != -1) {
+      const selectedProcess = this.feedbackQueues[queueIdx][0];
+      // if the task already finished, but time slice not used up
+      // clear tmpRestTime if ``switchImmediatelyAfterFinish`` is true.
+      if (selectedProcess.isFinished() && this.switchImmediatelyAfterFinish) {
+        this.tmpRestTime = 0;
+      }
+      // task not finished, continue
+      else {
+        return selectedProcess;
+      }
+    }
+
+    // update feedback list
+    if (this.tmpRestTime == 0 && this.tmpSelectedQueueIdx != -1) {
+      const currentQueue = this.feedbackQueues[queueIdx];
+      // this process is finished, remove it
+      if (currentQueue[0].isFinished()) {
+        currentQueue.shift();
+      }
+      // if this queue is not the last one, put to next queue
+      else if (this.tmpSelectedQueueIdx < this.queueCount) {
+        const nextQueue = this.feedbackQueues[queueIdx + 1];
+
+        nextQueue.push(currentQueue.shift()!);
+      }
+      // if it's the last queue, rotate current queue
+      else {
+        currentQueue.push(currentQueue.shift()!);
+      }
+    }
+
+    // find new process to allocate
+    let nonEmptyQueueIdx = -1;
+    for (let i = 0; i < this.queueCount; ++i) {
+      // try to find the first queue that not empty from start to end
+      const queue = this.feedbackQueues[i];
+      if (queue.length == 0) {
+        continue;
+      }
+      nonEmptyQueueIdx = i;
+      break;
+    }
+
+    // if not found
+    if (nonEmptyQueueIdx == -1) {
+      throw new NoValidAllocationError(this.generateSnapshot());
+    }
+
+    const timeSlice = this.timeSlices[nonEmptyQueueIdx];
+
+    // update tmp states
+    this.tmpRestTime = timeSlice;
+    this.tmpSelectedQueueIdx = nonEmptyQueueIdx;
+
+    // get pcb
+    const selectedPcb = this.feedbackQueues[nonEmptyQueueIdx][0];
+
+    return selectedPcb;
+  }
+
+  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+    this.tmpRestTime -= 1;
+    return 1;
+  }
+
+  copyFeedbackQueues(): PCBList[] {
+    let queues: PCBList[] = [];
+    for (let queueIdx = 0; queueIdx < this.queueCount; ++queueIdx) {
+      let currentQueue: PCBList = [];
+      for (let pcb of this.feedbackQueues[queueIdx]) {
+        currentQueue.push(instanceToInstance(pcb));
+      }
+      queues.push(currentQueue);
+    }
+    return queues;
+  }
+
+  override generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number): SimulatorSnapshot {
+    // create basic snapshot
+    const snapshot = super.generateSnapshot(nextAllocation, nextTimeSlice);
+
+    // generate additional info for MFQ algorithm
+    const additionalInfo: MFQSimulatorAdditionInfo = {
+      selectedQueueIdx: this.tmpSelectedQueueIdx,
+      feedbackQueues: this.copyFeedbackQueues(),
+    };
+    snapshot.additionalInfo = additionalInfo;
+
+    // return snapshot
+    return snapshot;
+  }
+}
