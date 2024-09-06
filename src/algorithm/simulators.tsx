@@ -1,8 +1,19 @@
 "use client";
 
-import { ProcessControlBlock, SimulatorSnapshot } from "./schemes";
-import { AlgorithmError, NoValidAllocationError } from "@/algorithm/exceptions";
-import { instanceToInstance } from "class-transformer";
+import {ProcessControlBlock, SimulatorSnapshot} from "./schemes";
+import {AlgorithmError, NoValidAllocationError} from "@/algorithm/exceptions";
+import {instanceToInstance} from "class-transformer";
+
+
+/**
+ * Generate function could be use as the param of Array.filter(),
+ * which will filter out the process that not yet arrive or already finished.
+ */
+export function processingOnlyFilterGenerator(currentTime: number) {
+  return function (pcb: ProcessControlBlock) {
+    return (!pcb.isFinished() && pcb.isArrived(currentTime));
+  }
+}
 
 export abstract class SimulatorBase {
   /**
@@ -70,7 +81,7 @@ export abstract class SimulatorBase {
    * Params:
    * - ``nextPcb`` The next process chosen
    */
-  abstract getNextTimeSlice(nextPcb: ProcessControlBlock): number;
+  abstract getNextTimeSlice(nextPcb: ProcessControlBlock | undefined): number;
 
   /**
    * Determine if all processes in pcbList is finished
@@ -138,9 +149,9 @@ export abstract class SimulatorBase {
 
     // determine next allocation an next time slice
     let nextAllocation = this.getNextAllocation();
-    if (nextAllocation === undefined) {
-      throw new NoValidAllocationError(this.generateSnapshot());
-    }
+    // if (nextAllocation === undefined) {
+    //   throw new NoValidAllocationError(this.generateSnapshot());
+    // }
     let nextTimeSlice = this.getNextTimeSlice(nextAllocation);
 
     // generate snapshot
@@ -202,16 +213,13 @@ export class HighPriorityFirstSimulator extends SimulatorBase {
     }
 
     if (chosen === undefined) {
-      throw new AlgorithmError(
-        "no_valid_process",
-        "Could not find a valid process to proceed, maybe all process has already finished",
-      );
+      return chosen;
     }
 
     return chosen;
   }
 
-  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+  override getNextTimeSlice(pcb: ProcessControlBlock | undefined): number {
     // return pcb.remainingTime;
     return this.timeSlice;
   }
@@ -262,7 +270,9 @@ export class HighPriorityFirstSimulator extends SimulatorBase {
    */
   override generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number): SimulatorSnapshot {
     const snapshot = super.generateSnapshot(nextAllocation, nextTimeSlice);
-    this.sortPcbListInCurrentTimeContext(snapshot.pcbList);
+    snapshot.additionalInfo = {};
+    snapshot.additionalInfo.orderedPcbList = snapshot.pcbList.filter(processingOnlyFilterGenerator(this.currentTime));
+    this.sortPcbListInCurrentTimeContext(snapshot.additionalInfo.orderedPcbList);
     return snapshot;
   }
 }
@@ -301,13 +311,13 @@ export class ShortJobFirstSimulator extends SimulatorBase {
     }
 
     if (chosen === undefined) {
-      throw new NoValidAllocationError(this.generateSnapshot());
+      return undefined;
     }
 
     return chosen;
   }
 
-  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+  override getNextTimeSlice(pcb: ProcessControlBlock | undefined): number {
     // return pcb.remainingTime;
     return this.timeSlice;
   }
@@ -354,7 +364,9 @@ export class ShortJobFirstSimulator extends SimulatorBase {
    */
   override generateSnapshot(nextAllocation?: ProcessControlBlock, nextTimeSlice?: number): SimulatorSnapshot {
     const snapshot = super.generateSnapshot(nextAllocation, nextTimeSlice);
-    this.sortPcbListInCurrentTimeContext(snapshot.pcbList);
+    snapshot.additionalInfo = {};
+    snapshot.additionalInfo.orderedPcbList = snapshot.pcbList.filter(processingOnlyFilterGenerator(this.currentTime));
+    this.sortPcbListInCurrentTimeContext(snapshot.additionalInfo.orderedPcbList);
     return snapshot;
   }
 }
@@ -452,14 +464,14 @@ export class MFQSimulator extends SimulatorBase {
     }
 
     // update feedback list
-    if (this.tmpRestTime == 0 && this.tmpSelectedQueueIdx != -1) {
+    if (this.tmpRestTime == 0 && this.tmpSelectedQueueIdx >= 0) {
       const currentQueue = this.feedbackQueues[queueIdx];
       // this process is finished, remove it
       if (currentQueue[0].isFinished()) {
         currentQueue.shift();
       }
       // if this queue is not the last one, put to next queue
-      else if (this.tmpSelectedQueueIdx < this.queueCount) {
+      else if (this.tmpSelectedQueueIdx < this.queueCount - 1) {
         const nextQueue = this.feedbackQueues[queueIdx + 1];
 
         nextQueue.push(currentQueue.shift()!);
@@ -484,7 +496,8 @@ export class MFQSimulator extends SimulatorBase {
 
     // if not found
     if (nonEmptyQueueIdx == -1) {
-      throw new NoValidAllocationError(this.generateSnapshot());
+      // throw new NoValidAllocationError(this.generateSnapshot());
+      return undefined;
     }
 
     const timeSlice = this.timeSlices[nonEmptyQueueIdx];
@@ -499,7 +512,7 @@ export class MFQSimulator extends SimulatorBase {
     return selectedPcb;
   }
 
-  override getNextTimeSlice(pcb: ProcessControlBlock): number {
+  override getNextTimeSlice(pcb: ProcessControlBlock | undefined): number {
     this.tmpRestTime -= 1;
     return 1;
   }
@@ -509,6 +522,9 @@ export class MFQSimulator extends SimulatorBase {
     for (let queueIdx = 0; queueIdx < this.queueCount; ++queueIdx) {
       let currentQueue: PCBList = [];
       for (let pcb of this.feedbackQueues[queueIdx]) {
+        if (pcb.isFinished()) {
+          continue;
+        }
         currentQueue.push(instanceToInstance(pcb));
       }
       queues.push(currentQueue);

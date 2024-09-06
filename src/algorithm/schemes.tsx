@@ -54,6 +54,21 @@ export class ProcessControlBlock {
     return rest;
   }
 
+  get processingTime() {
+    if (!this.isFinished()) {
+      return undefined;
+    }
+    return this.finishTime! - this.arrivalTime;
+  }
+
+  get weightedProcessingTime() {
+    let ptime = this.processingTime;
+    if (ptime === undefined) {
+      return undefined;
+    }
+    return ptime / this.requiredTime;
+  }
+
   isArrived(currentTime: number): boolean {
     return currentTime >= this.arrivalTime;
   }

@@ -3,9 +3,10 @@
 import React, {useState} from "react";
 
 // Packages
-import {AnimatePresence, motion} from 'framer-motion';
-import {Space, Button} from 'antd';
+import {AnimatePresence, LayoutGroup, motion} from 'framer-motion';
+import {Space, Button, Modal} from 'antd';
 import {AiFillCaretLeft, AiFillCaretRight, AiOutlineReload} from "react-icons/ai";
+import {useKeyStroke} from "@react-hooks-library/core";
 
 // Components
 import {FlexDiv, PageRootContainer} from '@/components/container';
@@ -15,12 +16,14 @@ import {Header, HeaderTitle} from '@/components/header';
 import {classNames} from '@/tools/css_tools';
 
 // Algorithm
-import {SimulatorSnapshot} from "@/algorithm/schemes";
+import {ProcessControlBlock, SimulatorSnapshot} from "@/algorithm/schemes";
 import {SimulatorBase} from '@/algorithm/simulators';
+import {ProcessControlBlockMiniCard, ProcessDetailCard} from "@/cus_components/algorithms";
 
 export type VisualizerFuncType = ({snapshots, idx}: { snapshots: SimulatorSnapshot[], idx: number }) => React.ReactNode;
 
 interface SimulatePageTemplateProps {
+  algorithmName?: string;
   snapshots: SimulatorSnapshot[];
   visualizer: VisualizerFuncType;
   cpuStatesComp?: React.ReactNode;
@@ -31,22 +34,36 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
 
   const currentSnapshot = props.snapshots[idx];
 
+  /**
+   * Function generator that uses to generate callback function to update index
+   * @param delta
+   */
   function handleIdxChangeGenerator(delta: number) {
-    return function () {
+    return function (e?: any) {
       let newValue = idx + delta;
       newValue = newValue >= props.snapshots.length ? props.snapshots.length - 1 : newValue;
       newValue = newValue < 0 ? 0 : newValue;
       setIdx(newValue);
+
+      try {
+        e.preventDefault()
+      } catch (e) {
+      }
     }
   }
+
+  // enable keystroke feature
+  useKeyStroke(['d', 'D', ' '], handleIdxChangeGenerator(1));
+  useKeyStroke(['a', 'A', 'Backspace'], handleIdxChangeGenerator(-1));
+  useKeyStroke(['Escape'], () => (setIdx(0)));
 
   return (
     <PageRootContainer
       hasBottomSpace={false}
       header={
         <>
-          <Header>
-            <HeaderTitle>Simulation</HeaderTitle>
+          <Header link={'/simulate'}>
+            <HeaderTitle>Simulation Visualizer - {props.algorithmName ?? 'Unknown Algorithm'}</HeaderTitle>
           </Header>
         </>
       }
@@ -76,11 +93,18 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
 
           {/*Right State Banner Part*/}
           <FlexDiv className={classNames(
-            'flex-none flex-col justify-start items-center'
+            'flex-none flex-col justify-start items-center gap-y-2'
           )}>
 
             {/*Simulator State Part*/}
             <SimulatorStateCard snapshot={currentSnapshot}/>
+
+            {/*Process Details Part*/}
+            <FlexDiv className={classNames(
+              'h-full w-full overflow-auto'
+            )}>
+              <ProcessStatusCard pcbList={currentSnapshot.pcbList} timestamp={idx}/>
+            </FlexDiv>
 
           </FlexDiv>
         </FlexDiv>
@@ -105,7 +129,7 @@ function SimulatorStateCard({snapshot}: { snapshot: SimulatorSnapshot }) {
   return (
     <motion.div className={classNames(
       'bg-fgcolor dark:bg-fgcolor-dark rounded-xl p-2 font-mono',
-      'min-w-[20rem]'
+      'min-w-[20rem] shadow-lg'
     )}>
       {/*Title*/}
       <h1 className={classNames(
@@ -125,5 +149,51 @@ function SimulatorStateCard({snapshot}: { snapshot: SimulatorSnapshot }) {
       </p>
 
     </motion.div>
+  );
+}
+
+function ProcessStatusCard(
+  {
+    pcbList,
+    timestamp,
+  }: {
+    pcbList: ProcessControlBlock[],
+    timestamp: number,
+  }) {
+
+  // store the pcb detail info selection state
+  const [selectedPcb, setSelectedPcb] = useState<ProcessControlBlock | undefined>();
+
+  return (
+    <LayoutGroup>
+      <FlexDiv
+        expand
+        className={classNames(
+          'flex-none',
+          'flex-col gap-y-2'
+        )}>
+        <Modal
+          title='Process Detailed Info'
+          open={selectedPcb !== undefined}
+          onOk={() => setSelectedPcb(undefined)}
+          onCancel={() => setSelectedPcb(undefined)}
+          destroyOnClose={false}
+        >
+          <ProcessDetailCard pcb={selectedPcb!} timestamp={timestamp}/>
+        </Modal>
+        {pcbList.map(function (pcb, index) {
+          return (
+            <button key={index} onClick={() => setSelectedPcb(pcb)}>
+              <ProcessControlBlockMiniCard
+                key={index}
+                pcb={pcb}
+                currentTime={timestamp}
+                layoutIdPrefix='process_status_'
+              />
+            </button>
+          );
+        })}
+      </FlexDiv>
+    </LayoutGroup>
   );
 }
