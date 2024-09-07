@@ -1,0 +1,12 @@
+# drawio temporary files
+**/*.bkp
+**/*.dtmp
+
+# generated presentaion file
+
+**/*.pptx
+**/*.pdf
+# **/*.png
+
+# assets
+/assets
