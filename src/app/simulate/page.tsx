@@ -2,15 +2,11 @@
 
 import Link from 'next/link';
 
-// Package
-import {motion} from 'framer-motion';
 
 // Components
 import {FlexDiv, PageRootContainer} from '@/components/container';
 import {Header, HeaderTitle} from '@/components/header';
 
-// Client
-// import {Test} from './client';
 
 // Tools
 import {classNames} from '@/tools/css_tools';
@@ -42,14 +38,19 @@ export default function Page() {
           'flex-row gap-2 justify-evenly items-center'
         )}>
           <AlgorithmCard
+            key='sjf'
             name={'Short Job First'}
             description='First deal with the process that cost less time to complete.' link='/simulate/sjf'/>
-          <AlgorithmCard name={'Priority Scheduling'}
-                         description='Determine the order using priority attribute of the process.'
-                         link='/simulate/ps'/>
-          <AlgorithmCard name={'Multilevel Feedback Queue'}
-                         description='Using multi-queue structure to determine next allocation.'
-                         link='/simulate/mfq'/>
+          <AlgorithmCard
+            key='ps'
+            name={'Priority Scheduling'}
+            description='Determine the order using priority attribute of the process.'
+            link='/simulate/ps'/>
+          <AlgorithmCard
+            key='mfq'
+            name={'Multilevel Feedback Queue'}
+            description='Using multi-queue structure to determine next allocation.'
+            link='/simulate/mfq'/>
         </FlexDiv>
       </FlexDiv>
     </PageRootContainer>
@@ -62,7 +63,8 @@ interface AlgorithmCardProps {
   link: string;
 }
 
-export function AlgorithmCard(props: AlgorithmCardProps) {
+
+function AlgorithmCard(props: AlgorithmCardProps) {
   return (
     <Link href={props.link}>
       <FlexDiv

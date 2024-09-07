@@ -4,8 +4,15 @@ import React, {useState} from "react";
 
 // Packages
 import {AnimatePresence, LayoutGroup, motion} from 'framer-motion';
-import {Space, Button, Modal} from 'antd';
-import {AiFillCaretLeft, AiFillCaretRight, AiOutlineReload} from "react-icons/ai";
+import {Space, Button, Modal, Tooltip, Popover, Typography} from 'antd';
+
+const {
+  Text,
+  Title,
+  Paragraph,
+} = Typography;
+
+import {AiFillCaretLeft, AiFillCaretRight, AiOutlineReload, AiOutlineQuestion} from "react-icons/ai";
 import {useKeyStroke} from "@react-hooks-library/core";
 
 // Components
@@ -86,7 +93,7 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
           <FlexDiv
             expand
             className={classNames(
-              'overflow-auto justify-center items-center'
+              'flex-auto overflow-auto justify-center items-center'
             )}>
             <props.visualizer snapshots={props.snapshots} idx={idx}></props.visualizer>
           </FlexDiv>
@@ -111,13 +118,30 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
 
         {/*Control Bottom Nav Part*/}
         <FlexDiv className={classNames(
-          'flex-none p-2 bg-fgcolor dark:bg-fgcolor-dark rounded-xl'
+          'flex-none flex-row gap-2 p-2 bg-fgcolor dark:bg-fgcolor-dark rounded-xl'
         )}>
           <Space.Compact size='large'>
             <Button icon={<AiFillCaretLeft/>} onClick={handleIdxChangeGenerator(-1)}>Backward</Button>
             <Button icon={<AiFillCaretRight/>} type='primary' onClick={handleIdxChangeGenerator(1)}>Forward</Button>
             <Button icon={<AiOutlineReload/>} danger onClick={() => setIdx(0)}>Reset</Button>
           </Space.Compact>
+
+          {/*Keystrike Tooltip Part*/}
+          <Popover title='Usage Of Hotkeys' content={
+            (
+              <>
+                <Paragraph>
+                  <ul>
+                    <li>Forward: <Text keyboard>D</Text> <Text keyboard>Whitespace</Text></li>
+                    <li>Backward: <Text keyboard>A</Text> <Text keyboard>Backspace</Text></li>
+                    <li>Reset: <Text keyboard>Esc</Text></li>
+                  </ul>
+                </Paragraph>
+              </>
+            )
+          }>
+            <Button icon={<AiOutlineQuestion/>} size='large'></Button>
+          </Popover>
         </FlexDiv>
       </FlexDiv>
 

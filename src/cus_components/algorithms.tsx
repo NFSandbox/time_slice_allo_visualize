@@ -2,7 +2,7 @@ import {forwardRef} from "react";
 
 // Packages
 import {motion} from 'framer-motion';
-import {Divider, Flex, Progress, Space, Statistic} from 'antd';
+import {Divider, Flex, Progress, Space, Statistic, Tooltip} from 'antd';
 
 // Algorithms
 import {ProcessControlBlock} from '@/algorithm/schemes';
@@ -17,6 +17,7 @@ import {classNames} from "@/tools/css_tools";
 
 interface ProcessControlBlockMiniCardProps {
   pcb: ProcessControlBlock;
+  showPriority?: boolean;
   currentTime?: number;
   allocated?: boolean;
   layoutIdPrefix?: string;
@@ -75,19 +76,42 @@ export function ProcessControlBlockMiniCard(props: ProcessControlBlockMiniCardPr
             props.allocated ? 'border-2 border-blue shadow-lg shadow-blue/50' : '',
           )}>
 
-          {/*Title And Progress*/}
+          {/*Title Priority And Progress*/}
           <FlexDiv className={classNames(
             'w-full flex-row justify-between items-center',
           )}>
-            <motion.h1 className={classNames(
-              'text-lg'
-            )}>{props.pcb.pId}</motion.h1>
+            <div className={'flex flex-row gap-2 items-center'}>
+              {/*Title*/}
+              <motion.h1 className={classNames(
+                'text-lg'
+              )}>{props.pcb.pId}</motion.h1>
 
-            <div className={classNames(
-              'rounded-xl px-2 border-black/5 border-2'
-            )}>
-              <span>{pcb.processedTime} / {pcb.requiredTime}</span>
+              {/*Priority*/}
+              <Tooltip title='Priroity of this process'>
+                {props.showPriority && <div className={classNames(
+                  'rounded-xl px-2 border-black/5 border-2'
+                )}>
+                    <span>{pcb.priority}</span>
+                </div>}
+              </Tooltip>
             </div>
+
+            <Tooltip title={
+              (
+                <>
+                  <div>
+                    <p>Total required time: <span className='font-bold'>{pcb.requiredTime} Unit(s)</span></p>
+                    <p>Already processed: <span className='font-bold'>{pcb.processedTime} Unit(s)</span></p>
+                  </div>
+                </>
+              )
+            }>
+              <div className={classNames(
+                'rounded-xl px-2 border-black/5 border-2'
+              )}>
+                <span>{pcb.processedTime} / {pcb.requiredTime}</span>
+              </div>
+            </Tooltip>
           </FlexDiv>
 
           <Progress percent={parseFloat((props.pcb.progress * 100).toFixed(0))}/>

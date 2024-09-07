@@ -51,6 +51,7 @@ const PrioritySchedulingVisualizer: VisualizerFuncType = function (
             'p-2',
           )}>
             <ProcessControlBlockMiniCard
+              showPriority={true}
               key={value.pId}
               pcb={value}
               currentTime={currentSnapshotFrame.timestamp}
