@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 
-import { ConfigProvider, theme } from 'antd';
+import {ConfigProvider, theme} from 'antd';
 
-import { FlexDiv } from '@/components/container';
+import {FlexDiv} from '@/components/container';
 
 // Tools
-import { classNames } from "@/tools/css_tools";
-import { setDefault } from "@/tools/set_default";
+import {classNames} from "@/tools/css_tools";
+import {setDefault} from "@/tools/set_default";
 
 
 interface AdaptiveBackgroundProps {

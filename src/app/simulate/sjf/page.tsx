@@ -1,7 +1,7 @@
 'use client';
 
 // Basic
-import {useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 
 // Templates
 import {
@@ -23,16 +23,26 @@ import {AnimatePresence, LayoutGroup, motion} from "framer-motion";
 import {ProcessControlBlockMiniCard} from "@/cus_components/algorithms";
 import {id} from "postcss-selector-parser";
 import {FlexDiv} from "@/components/container";
-import {ProcessControlBlock} from "@/algorithm/schemes";
+import {ProcessControlBlock, SimulatorSnapshot} from "@/algorithm/schemes";
 
+// States
+import {useAlgoConfigStore} from "@/states/algo_config";
 
 export default function Page() {
-  const simulator = useRef(new ShortJobFirstSimulator(examplePcbListWithPriority));
-  simulator.current.simulate();
+  const getPcbList = useAlgoConfigStore(st => st.getPcbList);
+  const pcbList = useAlgoConfigStore(st => st.pcbList);
+
+  const [snapshots, setSnapshots] = useState<SimulatorSnapshot[] | undefined>(undefined);
+
+  useEffect(() => {
+    let simulator = new ShortJobFirstSimulator(getPcbList('sjf'));
+    simulator.simulate();
+    setSnapshots(simulator.snapshotList);
+  }, [getPcbList, pcbList]);
 
   return <SimulatePageTemplate
     algorithmName='Short Job First'
-    snapshots={simulator.current.snapshotList}
+    snapshots={snapshots ?? []}
     visualizer={ShortJobFirstVisualizer}/>;
 }
 

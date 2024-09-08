@@ -1,7 +1,10 @@
 'use client';
 
 // Basic
-import {useRef} from "react";
+import {useEffect, useRef, useState} from "react";
+
+// Packages
+import {AnimatePresence, LayoutGroup, motion} from "framer-motion";
 
 // Templates
 import {
@@ -18,21 +21,36 @@ import {
   MFQSimulatorAdditionInfo,
 }
   from '@/algorithm/simulators';
-import {classNames} from "@/tools/css_tools";
-import {AnimatePresence, LayoutGroup, motion} from "framer-motion";
 import {ProcessControlBlockMiniCard} from "@/cus_components/algorithms";
-import {id} from "postcss-selector-parser";
+
+// Components
 import {FlexDiv} from "@/components/container";
+
+// Tools
+import {classNames} from "@/tools/css_tools";
+
+// States
+import {useAlgoConfigStore} from "@/states/algo_config";
+import {SimulatorSnapshot} from "@/algorithm/schemes";
 
 
 export default function Page() {
-  const simulator = useRef(new MFQSimulator(examplePcbListWithMFQ));
-  simulator.current.setMFQConfig({count: 4, timeSlices: [1, 2, 4, 8]});
-  simulator.current.simulate();
+
+  const getPcbList = useAlgoConfigStore(st => st.getPcbList);
+  const pcbList = useAlgoConfigStore(st => st.pcbList);
+
+  const [snapshots, setSnapshots] = useState<SimulatorSnapshot[] | undefined>(undefined);
+
+  useEffect(() => {
+    let simulator = new MFQSimulator(getPcbList('mfq'));
+    simulator.setMFQConfig({count: 4, timeSlices: [1, 2, 4, 8]});
+    simulator.simulate();
+    setSnapshots(simulator.snapshotList);
+  }, [getPcbList, pcbList]);
 
   return <SimulatePageTemplate
     algorithmName='Multilevel Feedback Queue'
-    snapshots={simulator.current.snapshotList}
+    snapshots={snapshots ?? []}
     visualizer={MFQVisualizer}/>;
 }
 
