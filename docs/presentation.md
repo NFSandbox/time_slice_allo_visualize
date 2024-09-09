@@ -18,7 +18,7 @@ Time Slice Scheduling Algorithm Visualizer
 
 Yujia, AHU - Software Engineering
 
-![bg right:50% 60%](./assets/github_presentation_qrcode.png)
+![bg right:50% 50%](./assets/github_presentation_qrcode_wiki.png)
 
 ---
 
@@ -150,8 +150,9 @@ All visualization pages shared identical layout template, which contains:
 
 # Visualization **Highlight**
 
-- **Smooth and high-quality animations**, powered by `LayoutAnimation` and `AnimatePresence` in `framer-motion`.
-- **Hotkey Control** support.
+- **Smooth and high-quality animations**, powered by `framer-motion`.
+- Usage of **Icons**.
+- Quick **Hotkey Control**.
 - Full **Dark Mode** support.
 
 
@@ -162,6 +163,14 @@ Check out the Live Demo.
 - Layout Effect In Framer Motion: https://blog.maximeheckel.com/posts/framer-motion-layout-animations/
 
 ---
+
+# **Live** Demo
+
+
+
+---
+
+<!-- _footer: "" -->
 
 # Refs: Used Framework & Packages
 
@@ -177,25 +186,26 @@ Check out the Live Demo.
 ##### UI/UX
 
 - ![](https://img.shields.io/badge/Ant_Design-00a5d7?style=for-the-badge&logo=antdesign&logoColor=white) Popular web frontend component library, open-sourced by Ali.
+- ![](https://img.shields.io/badge/TailwindCSS-00a5b7?style=for-the-badge&logo=tailwindcss&logoColor=white) ClassName-Driven HTML inline styling.
 - ![](https://img.shields.io/badge/Framer_Motion-9700ff?style=for-the-badge&logo=framer&logoColor=white) Add simple and intuitive animation for visualization.
-
-<br>
 
 ----
 
 # Refs: Used Framework & Packages
 
-- React: https://react.dev/
-- Next.js: https://nextjs.org/
-- Ant Design: https://ant.design/
-- Framer Motion: https://www.framer.com/motion/
+- React: https://react.dev
+- Next.js: https://nextjs.org
+- Ant Design: https://ant.design
+- Framer Motion: https://www.framer.com/motion
 
 ---
 
 # Refs: More
 
-- **Marp Markdown Presentation EcoSystem** (https://marp.app/) for generating this presentation.
+- **Marp Markdown Presentation EcoSystem** (https://marp.app) for generating this presentation.
 - **Badges Shields** (https://github.com/badges/shields) for generating beautiful badges used in this presentation.
+- **Zustand** (https://zustand.docs.pmnd.rs) for Web State Management.
+- **React Icons** (https://react-icons.github.io/react-icons) for abundant open source SVG icons.
 
 ---
 

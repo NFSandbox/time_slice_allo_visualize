@@ -28,6 +28,7 @@ import {FlexDiv} from "@/components/container";
 
 // Tools
 import {classNames} from "@/tools/css_tools";
+import {asyncSleep} from '@/tools/general';
 
 // States
 import {useAlgoConfigStore} from "@/states/algo_config";
@@ -41,11 +42,18 @@ export default function Page() {
 
   const [snapshots, setSnapshots] = useState<SimulatorSnapshot[] | undefined>(undefined);
 
-  useEffect(() => {
+  async function updateSnapshot() {
+    // test sleep
+    await asyncSleep(500);
+
     let simulator = new MFQSimulator(getPcbList('mfq'));
     simulator.setMFQConfig({count: 4, timeSlices: [1, 2, 4, 8]});
     simulator.simulate();
     setSnapshots(simulator.snapshotList);
+  }
+
+  useEffect(() => {
+    updateSnapshot();
   }, [getPcbList, pcbList]);
 
   return <SimulatePageTemplate

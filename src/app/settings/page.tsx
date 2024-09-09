@@ -66,7 +66,7 @@ export default function Page() {
           <motion.div
             layout
             className={classNames(
-              'flex-col justify-start items-start p-4 w-full max-w-[50rem] gap-y-2 overflow-hidden',
+              'flex flex-col justify-start items-start p-4 w-full max-w-[50rem] gap-y-2 overflow-hidden',
               'bg-fgcolor dark:bg-fgcolor-dark',
               'shadow-xl',
             )}
@@ -74,11 +74,17 @@ export default function Page() {
               borderRadius: '16px'
             }}
           >
-            <motion.div layout='position'>
+
+            {/*Using Recommend Part*/}
+            <motion.div
+              layout='position'
+              className={classNames(
+                'flex flex-col gap-2 w-full'
+              )}>
               {/*Use Recommendation Part*/}
               <h2 className='text-lg font-bold'>Using Recommendation</h2>
               <FlexDiv className='w-full justify-between'>
-                <p>Using recommended processes config fits different algorithms and simulators</p>
+                <p>Using recommended processes configs pre-defined for different algorithms and simulators.</p>
 
                 {/*Switch*/}
                 <Switch value={algoConfig.useRecommend} onClick={function (e) {
@@ -109,7 +115,7 @@ export default function Page() {
 
                 {/*Add Process Part*/}
                 <FlexDiv className={classNames(
-                  'flex-row items-center justify-center',
+                  'flex-none flex-row items-center justify-center py-2',
                 )}>
                   <Form
                     layout="inline"
@@ -152,28 +158,29 @@ export default function Page() {
                 </FlexDiv>
 
                 {algoConfig.pcbList.length < 1 &&
-                    <FlexDiv className='pt-4'>
+                    <FlexDiv className='min-h-[10rem]'>
                         <ErrorCard title='No Process' description='There is no process in config list.'/>
                     </FlexDiv>
                 }
 
                 {/*Process List*/}
-                <ul className={classNames(
-                  'flex flex-col gap-2 justify-start items-center',
-                  'h-full max-h-[30rem] overflow-y-auto overflow-x-hidden'
-                )}>
-                  <AnimatePresence mode='popLayout'>
-                    {algoConfig.pcbList.map(function (pcb, idx) {
-                      // Process List Item
-                      return (<PcbListItem key={pcb.pId} idx={idx} pcb={pcb}/>);
-                    })}
-                  </AnimatePresence>
-                </ul>
+                {algoConfig.pcbList.length > 0 && <motion.ul
+                    layout
+                    className={classNames(
+                      'flex flex-none flex-col gap-2 justify-start items-center',
+                      'h-full max-h-[30rem] overflow-y-auto overflow-x-hidden',
+                    )}>
+                    <AnimatePresence mode='sync'>
+                      {algoConfig.pcbList.map(function (pcb, idx) {
+                        // Process List Item
+                        return (<PcbListItem key={pcb.pId} idx={idx} pcb={pcb}/>);
+                      })}
+                    </AnimatePresence>
+                </motion.ul>}
               </motion.div>
             )}
           </motion.div>
         </LayoutGroup>
-
       </PageRootContainer>
     </>
   );

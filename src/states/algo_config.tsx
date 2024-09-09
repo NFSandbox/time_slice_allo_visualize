@@ -87,7 +87,6 @@ export const useAlgoConfigStore = create<AlgoConfigState>()(
 
         getPcbList(algoType) {
           if (!get().useRecommend && get().pcbList && get().pcbList.length > 0) {
-            console.log('Returning pcbList from state!');
             return plainToInstance(ProcessControlBlock, get().pcbList);
           }
           if (algoType == 'mfq') {

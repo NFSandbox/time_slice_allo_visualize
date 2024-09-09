@@ -68,17 +68,36 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
   useKeyStroke(['a', 'A', 'Backspace'], handleIdxChangeGenerator(-1));
   useKeyStroke(['Escape'], () => (setIdx(0)));
 
+  // Loading
   if (currentSnapshot === undefined) {
     return (
-      <Center className='flex-col gap-y-4'>
-        <FlexDiv className='max-h-[10rem]'>
-          <ErrorCard
-            title='Simulating...'
-            description='The data is still loading, wait for a seconds.'
-            hasColor={false}
-          />
-        </FlexDiv>
-        <Loading/>
+      <Center className='overflow-hidden'>
+        <motion.div
+          className={classNames(
+            'w-full p-4 flex-col gap-y-4'
+          )}
+          initial={{
+            scale: 0.95,
+            opacity: 0,
+          }}
+          animate={{
+            scale: 1,
+            opacity: 1,
+          }}
+          transition={{
+            type: 'tween',
+            duration: 0.2
+          }}
+        >
+          <FlexDiv className='max-h-[10rem]'>
+            <ErrorCard
+              title='Simulating...'
+              description='The data is still loading, wait for a seconds.'
+              hasColor={false}
+            />
+          </FlexDiv>
+          <Loading/>
+        </motion.div>
       </Center>
     );
   } else {
@@ -139,9 +158,18 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
         </FlexDiv>
 
         {/*Control Bottom Nav Part*/}
-        <FlexDiv className={classNames(
-          'flex-none flex-row gap-2 p-2 bg-fgcolor dark:bg-fgcolor-dark rounded-xl'
-        )}>
+        <motion.div
+          initial={{
+            y: -50,
+            opacity: 0,
+          }}
+          animate={{
+            y: 0,
+            opacity: 1,
+          }}
+          className={classNames(
+            'flex flex-none flex-row gap-2 p-2 bg-fgcolor dark:bg-fgcolor-dark rounded-xl'
+          )}>
           <Space.Compact size='large'>
             <Button icon={<AiFillCaretLeft/>} onClick={handleIdxChangeGenerator(-1)}>Backward
               <Text keyboard>A</Text>
@@ -171,7 +199,7 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
           </Popover>
 
           <Button icon={<AiOutlineSetting/>} size='large' href='/settings'></Button>
-        </FlexDiv>
+        </motion.div>
       </FlexDiv>
 
     </PageRootContainer>
@@ -311,7 +339,7 @@ function ProcessStatusCard(
         </Modal>
         {pcbList.map(function (pcb, index) {
           return (
-            <button key={index} onClick={() => setSelectedPcb(pcb)}>
+            <motion.button key={index} onClick={() => setSelectedPcb(pcb)}>
               <ProcessControlBlockMiniCard
                 key={index}
                 pcb={pcb}
@@ -319,7 +347,7 @@ function ProcessStatusCard(
                 layoutIdPrefix='process_status_'
                 allocated={allocated === pcb.pId}
               />
-            </button>
+            </motion.button>
           );
         })}
       </FlexDiv>

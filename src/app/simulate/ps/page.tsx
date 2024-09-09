@@ -35,10 +35,14 @@ export default function Page() {
 
   const [snapshots, setSnapshots] = useState<SimulatorSnapshot[] | undefined>(undefined);
 
-  useEffect(() => {
+  async function updateSnapshot() {
     let simulator = new HighPriorityFirstSimulator(getPcbList('ps'));
     simulator.simulate();
     setSnapshots(simulator.snapshotList);
+  }
+
+  useEffect(() => {
+    updateSnapshot();
   }, [getPcbList, pcbList]);
 
   return <SimulatePageTemplate

@@ -34,10 +34,14 @@ export default function Page() {
 
   const [snapshots, setSnapshots] = useState<SimulatorSnapshot[] | undefined>(undefined);
 
-  useEffect(() => {
+  async function updateSnapshot() {
     let simulator = new ShortJobFirstSimulator(getPcbList('sjf'));
     simulator.simulate();
     setSnapshots(simulator.snapshotList);
+  }
+
+  useEffect(() => {
+    updateSnapshot();
   }, [getPcbList, pcbList]);
 
   return <SimulatePageTemplate
