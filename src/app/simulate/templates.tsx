@@ -198,7 +198,7 @@ export function SimulatePageTemplate(props: SimulatePageTemplateProps) {
             <Button icon={<AiOutlineQuestion/>} size='large'></Button>
           </Popover>
 
-          <Button icon={<AiOutlineSetting/>} size='large' href='/settings'></Button>
+          <Button icon={<AiOutlineSetting/>} size='large' href='../../settings'></Button>
         </motion.div>
       </FlexDiv>
 

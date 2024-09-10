@@ -40,17 +40,18 @@ export default function Page() {
           <AlgorithmCard
             key='sjf'
             name={'Short Job First'}
-            description='First deal with the process that cost less time to complete.' link='/simulate/sjf'/>
+            description='First deal with the process that cost less time to complete.'
+            link='sjf'/>
           <AlgorithmCard
             key='ps'
             name={'Priority Scheduling'}
             description='Determine the order using priority attribute of the process.'
-            link='/simulate/ps'/>
+            link='ps'/>
           <AlgorithmCard
             key='mfq'
             name={'Multilevel Feedback Queue'}
             description='Using multi-queue structure to determine next allocation.'
-            link='/simulate/mfq'/>
+            link='mfq'/>
         </FlexDiv>
       </FlexDiv>
     </PageRootContainer>
